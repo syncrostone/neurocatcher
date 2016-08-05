@@ -1,7 +1,9 @@
-from numpy import zeros, flipud, transpose, rot90
-from scipy.ndimage import rotate
-import itertools as it
-def dataTransform(data, truth, outDims,min,max, upDown=1, rotate=1)
+from numpy import zeros, flipud, transpose, rot90, mean
+import random
+
+
+
+def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1, rotate=1, brighten=1, contrast=1)
 
     """
     Generate training data of specified size with transformations.
@@ -16,20 +18,29 @@ def dataTransform(data, truth, outDims,min,max, upDown=1, rotate=1)
         [dataset lists[n lists [list of [x,y] coordinates]]
         neuron location coordinates, will be converted into binary image
 
-    outDims : int
-        output size (outdims*outdims) for input into network during training
+    inDims : int
+        data size (inDims*inDims) for input into network during training
 
-    min : int
+    outDims : int
+        truth size (outDims*outDims), output size of network
+
+    minGray : int
         minimum grayscale value
 
-    max : int
+    maxGray : int
         maximum grayscale value
 
     upDown : bool,optional, default=1
         whether to flip images up and down
 
     rotate : bool, optional, default=1
-        whether to rotate images 90,180 and 270 degrees
+        whether to rotate image
+
+    brighten : bool, optional, default=1
+        whether to randomly brighten the image
+
+    contrast : bool, optional, default=1
+        whether to randomly increase/decrease image contrast
 
     Returns
     -------
@@ -39,6 +50,111 @@ def dataTransform(data, truth, outDims,min,max, upDown=1, rotate=1)
     outTruth : numpy array
         (batch,outdims,outdims,1) array
     """
+
+
+    ### set up necessary functions #####################################
+    def makeBright(toBrighten,rand):
+        """
+        change brightness of each x y plane of [x,y,channels]
+
+        Parameters
+        ----------
+
+        toBrighten : numpy array
+            [x,y,channels]
+
+        rand : float
+            how much to change brightness
+
+        Returns
+        -------
+
+        brightened : numpy array
+            [x, y, channels]
+        """
+        brightened=toBrighten+rand
+        brightened[brightened>maxGray]=maxGray
+        brightened[brightened<minGray]=minGray
+        return brightened
+
+    def changeContrast(toContrast,rand):
+        """
+        change contrast of each x y plane of [x,y,channels]
+
+        Parameters
+        ----------
+
+        toContrast : numpy array
+            [x,y,channels]
+
+        rand : float
+            how much to change contrast
+
+        Returns
+        -------
+
+        contrasted : numpy array
+            [x, y, channels]
+        """
+
+        toContrast=transpose(toContrast,(2,0,1))
+        mn=mean(toContrast,axis=(1,2))
+        contrasted=(toContrast-mn)*rand+mn
+        contrasted[contrasted>maxGray]=maxGray
+        contrasted[contrasted<minGray]=minGray
+        return contrasted
+
+    def flipUpDown(toFlip,rand):
+        """
+        flip each x y plane of [x,y,channels]
+
+        Parameters
+        ----------
+
+        toFlip : numpy array
+            [x,y,channels]
+
+        rand : bool
+            whether or not to flip
+
+        Returns
+        -------
+
+        flipped : numpy array
+            [x, y, channels]
+        """
+        if rand==1:
+            flipped=zeros(toFlip.shape)
+            toFlip=transpose(toFlip,(2,0,1))
+            for c, channel in enumerate(toFlip)
+                flipped[:,:,c]=flipud(channel)
+            return flipped
+        else:
+            return flipped
+    
+    def rotate(toRotate,rand):
+        """
+        rotate each x y plane of [x,y,channels]
+
+        Parameters
+        ----------
+
+        toRotate : numpy array
+            [x,y,channels]
+        rand : int
+            how much to rotate [0,1,2,3]* 90 degrees
+
+        Returns
+        -------
+
+        rotated : numpy array
+            [x, y, channels]
+        """
+        rotated=zeros(toFlip.shape)
+        toRotate=transpose(toFlip,(2,0,1))
+        for c, channel in enumerate(toRotate)
+            rotated[:,:,c]=rot90(channel,rand)
+        return rotated
     # make binary image of truth, trutharray
     truthArray=zeros((data.shape[0],data.shape[1],data.shape[2],1))
     for d,dataset in enumerate(truth):
@@ -46,146 +162,55 @@ def dataTransform(data, truth, outDims,min,max, upDown=1, rotate=1)
             for coordinate in neuron:
                 truthArray[d,coordinate[0],coordinate[1],0]=1
     
-    xIters=data.shape[1]+1-outDims
-    yIters=data.shape[2]+1-outDims
+    #########################################################################
 
     #set size of returned arrays
-    outData=zeros(((upDown*2+rotate*4)*xIters*yIters,outDims,outDims,data.shape[3]))
-    outTruth=zeros(((upDown*2+rotate*4)*xIters*yIters,outDims,outDims,1))
+    outData=zeros((batchSize,outDims,outDims,data.shape[3]))
+    outTruth=zeros((batchSize,outDims,outDims,1))
     
-    for dataset in range(0,len(data)):
-        outData[dataset*xIters*yIters:(dataset+1)*xIters*yIters, :, :, :]=chopImage(data[dataset, :, :, :])
-        outTruth[dataset*xIters*yIters:(dataset+1)*xIters*yIters, :, :, :]=chopImage(truthArray[dataset, :, :,:])
+    #initialize random generator
+    random.seed()
 
-    def flipUpDown(toFlip):
-        """
-        flip each x y plane of [dataset,x,y,channels]
+    #generate a random patch for each image in the batch
+    for b in range(0,batchSize):
 
-        Parameters
-        ----------
+        #randomly pick the patch to use
+        dataset=random.randint(0,len(data))
+        startX=random.randint(0,data.shape[1]-outDims)
+        startY=random.randint(0,data.shape[2]-outDims)
+        currData=data[dataset,startX:startX+outDims, startY:startY+outDims,:]
+        currTruth=truthArray[dataset,startX:startX+outDims, startY:startY+outDims,:]
 
-        toFlip : numpy array
-            [dataset,x,y,channels]
+        #calculate truth cropping indices
+        totalCrop=inDims-outDims
+        cropStart=totalCrop/2
+        cropEnd=outDims-(totalCrop/2+totalCrop%2)
 
-        Returns
-        -------
+        #randomly set all image distortion values if on, otherwise set to identity of function
+        if flipud: 
+            flip=random.randint(0,1)
+        else:
+            flip=0
 
-        flipped : numpy array
-            [dataset, x, y, channels]
-        """
-        flipped=zeros(toFlip.shape)
-        toFlip=transpose(toFlip,(0,3,1,2))
-        for d, dataset in enumerate(toFlip)
-            for c, channel in enumerate(toFlip)
-                toFlip[d,:,:,c]=flipud(channel)
+        if rotate:
+            rotation=random.randint(0,3)
+        else:
+            rotation=0
+
+        if brighten:
+            bright=(random.random()-.5)*(maxGray-minGray)+minGray
+        else:
+            bright=0
+
+        if contrast:
+            contrastFactor=random.random()*2
+        else:
+            contrastFactor=1
+
+        #calculate datapoint with distortions and truth cropping
+        outData[b, :, :, :]=changeContrast(makeBright(rotate(flipUpDown(currData,flip),rotation),bright),contrastFactor)
+        outTruth[b, :, :, :]=rotate(flipUpDown(currTruth,flip),rotation)[cropStart:cropEnd,cropStart:cropEnd,:]
+    return outData, outTruth
     
-    def rotate90(toRotate):
-        """
-        rotate each x y plane of [dataset,x,y,channels] 90
-
-        Parameters
-        ----------
-
-        toRotate : numpy array
-            [dataset,x,y,channels]
-
-        Returns
-        -------
-
-        rotated : numpy array
-            [dataset, x, y, channels]
-        """
-        rotated=zeros(toFlip.shape)
-        toRotate=transpose(toFlip,(0,3,1,2))
-        for d, dataset in enumerate(toRotate)
-            for c, channel in enumerate(toRotate)
-                toRotate[d,:,:,c]=rot90(channel,1)
-
-    def rotate180(toRotate):
-        """
-        rotate each x y plane of [dataset,x,y,channels] 180
-
-        Parameters
-        ----------
-
-        toRotate : numpy array
-            [dataset,x,y,channels]
-
-        Returns
-        -------
-
-        rotated : numpy array
-            [dataset, x, y, channels]
-        """
-        rotated=zeros(toFlip.shape)
-        toRotate=transpose(toFlip,(0,3,1,2))
-        for d, dataset in enumerate(toRotate)
-            for c, channel in enumerate(toRotate)
-                toRotate[d,:,:,c]=rot90(channel,2)
-
-    def rotate270(toRotate):
-        """
-        rotate each x y plane of [dataset,x,y,channels] 270
-
-        Parameters
-        ----------
-
-        toRotate : numpy array
-            [dataset,x,y,channels]
-
-        Returns
-        -------
-
-        rotated : numpy array
-            [dataset, x, y, channels]
-        """
-        rotated=zeros(toFlip.shape)
-        toRotate=transpose(toFlip,(0,3,1,2))
-        for d, dataset in enumerate(toRotate)
-            for c, channel in enumerate(toRotate)
-                toRotate[d,:,:,c]=rot90(channel,3)
-
-    def noTransform(noTransform):
-        """
-        returns the input
-
-        Parameters
-        ----------
-
-        noTransform : numpy array
-            [dataset,x,y,channels]
-
-        Returns
-        -------
-
-        noTransform : numpy array
-            [dataset, x, y, channels]
-        """
-        return noTransform
-
-    def chopImage(toChop):
-        
-        """
-        chop image into pieces of size outDims
-
-        Parameters
-        ----------
-
-        toChop :  numpy array 
-            [1,x,y,channels]
-
-        Returns
-        -------
-
-        toReturn : numpy array
-            [yIters*xIters,outDims, outDims, channels]
-
-        """
-        toReturn=zeros((xIters*yIters,outDims,outDims,toChop.shape[2]))
-        for i in range(0,xIters):
-            for j in range(0,yIters):
-                toReturn[i*yIters+j,:,:,:]=toChop[i:(i+outDims), j:(j+outDims),:]
-        return toReturn
     
 
-def truthCrop(truth, filtersize)
