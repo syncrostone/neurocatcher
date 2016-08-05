@@ -1,9 +1,9 @@
-from numpy import zeros, flipud, transpose, rot90, mean
+from numpy import zeros, flipud, transpose, rot90, mean, expand_dims
 import random
 
 
 
-def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1, rotate=1, brighten=1, contrast=1)
+def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1, rotate=1, brighten=1, contrast=1):
 
     """
     Generate training data of specified size with transformations.
@@ -97,8 +97,8 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
             [x, y, channels]
         """
 
-        toContrast=transpose(toContrast,(2,0,1))
-        mn=mean(toContrast,axis=(1,2))
+        mn=zeros(toContrast.shape)
+        mn[0,0,:]=mean(toContrast,axis=(0,1))
         contrasted=(toContrast-mn)*rand+mn
         contrasted[contrasted>maxGray]=maxGray
         contrasted[contrasted<minGray]=minGray
@@ -126,11 +126,11 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
         if rand==1:
             flipped=zeros(toFlip.shape)
             toFlip=transpose(toFlip,(2,0,1))
-            for c, channel in enumerate(toFlip)
+            for c, channel in enumerate(toFlip):
                 flipped[:,:,c]=flipud(channel)
             return flipped
         else:
-            return flipped
+            return toFlip
     
     def rotate(toRotate,rand):
         """
@@ -150,11 +150,21 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
         rotated : numpy array
             [x, y, channels]
         """
-        rotated=zeros(toFlip.shape)
-        toRotate=transpose(toFlip,(2,0,1))
-        for c, channel in enumerate(toRotate)
-            rotated[:,:,c]=rot90(channel,rand)
-        return rotated
+        if rand==1:
+            rotated=zeros(toRotate.shape)
+            toRotate=transpose(toRotate,(2,0,1))
+            for c, channel in enumerate(toRotate):
+                rotated[:,:,c]=rot90(channel,rand)
+            return rotated
+        else:
+            return toRotate
+
+
+    #########################################################################   
+    
+
+
+
     # make binary image of truth, trutharray
     truthArray=zeros((data.shape[0],data.shape[1],data.shape[2],1))
     for d,dataset in enumerate(truth):
@@ -162,10 +172,10 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
             for coordinate in neuron:
                 truthArray[d,coordinate[0],coordinate[1],0]=1
     
-    #########################################################################
+ 
 
     #set size of returned arrays
-    outData=zeros((batchSize,outDims,outDims,data.shape[3]))
+    outData=zeros((batchSize,inDims,inDims,data.shape[3]))
     outTruth=zeros((batchSize,outDims,outDims,1))
     
     #initialize random generator
@@ -175,16 +185,16 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
     for b in range(0,batchSize):
 
         #randomly pick the patch to use
-        dataset=random.randint(0,len(data))
-        startX=random.randint(0,data.shape[1]-outDims)
-        startY=random.randint(0,data.shape[2]-outDims)
-        currData=data[dataset,startX:startX+outDims, startY:startY+outDims,:]
-        currTruth=truthArray[dataset,startX:startX+outDims, startY:startY+outDims,:]
+        dataset=random.randint(0,len(data)-1)
+        startX=random.randint(0,data.shape[1]-inDims)
+        startY=random.randint(0,data.shape[2]-inDims)
+        currData=data[dataset,startX:startX+inDims, startY:startY+inDims,:]
+        currTruth=truthArray[dataset,startX:startX+inDims, startY:startY+inDims,:]
 
         #calculate truth cropping indices
         totalCrop=inDims-outDims
         cropStart=totalCrop/2
-        cropEnd=outDims-(totalCrop/2+totalCrop%2)
+        cropEnd=inDims-(totalCrop/2+totalCrop%2)
 
         #randomly set all image distortion values if on, otherwise set to identity of function
         if flipud: 
