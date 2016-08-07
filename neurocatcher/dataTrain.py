@@ -10,8 +10,10 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
 
     Parameters
     ----------
-    data : numpy array
-        dimensions=(dataset,x,y,channels)
+    data : list of numpy arrays
+        dimensions=[(x,y,channels),(x,y,channels)]
+        for dataset in data...
+        number of channels must be constant across all datasets
         raw data
 
     truth : list optional
@@ -166,16 +168,16 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
 
 
     # make binary image of truth, trutharray
-    truthArray=zeros((data.shape[0],data.shape[1],data.shape[2],1))
+    truthArray=[zeros((dataset.shape[0],dataset.shape[1],1)) for dataset in data]
     for d,dataset in enumerate(truth):
         for neuron in dataset:
             for coordinate in neuron:
-                truthArray[d,coordinate[0],coordinate[1],0]=1
+                truthArray[d][coordinate[0],coordinate[1],0]=1
     
  
 
     #set size of returned arrays
-    outData=zeros((batchSize,inDims,inDims,data.shape[3]))
+    outData=zeros((batchSize,inDims,inDims,data[0].shape[2]))
     outTruth=zeros((batchSize,outDims,outDims,1))
     
     #initialize random generator
@@ -186,10 +188,10 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
 
         #randomly pick the patch to use
         dataset=random.randint(0,len(data)-1)
-        startX=random.randint(0,data.shape[1]-inDims)
-        startY=random.randint(0,data.shape[2]-inDims)
-        currData=data[dataset,startX:startX+inDims, startY:startY+inDims,:]
-        currTruth=truthArray[dataset,startX:startX+inDims, startY:startY+inDims,:]
+        startX=random.randint(0,data[dataset].shape[0]-inDims)
+        startY=random.randint(0,data[dataset].shape[1]-inDims)
+        currData=data[dataset][startX:startX+inDims, startY:startY+inDims,:]
+        currTruth=truthArray[dataset][startX:startX+inDims, startY:startY+inDims,:]
 
         #calculate truth cropping indices
         totalCrop=inDims-outDims
