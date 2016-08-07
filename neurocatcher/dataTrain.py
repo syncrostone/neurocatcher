@@ -3,7 +3,7 @@ import random
 
 
 
-def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1, rotate=1, brighten=1, contrast=1):
+def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, upDown=1, rotate=1, brighten=1, contrast=1):
 
     """
     Generate training data of specified size with transformations.
@@ -53,7 +53,7 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
 
 
     ### set up necessary functions #####################################
-    def makeBright(toBrighten,rand):
+    def makeBright(toBrighten, rand):
         """
         change brightness of each x y plane of [x,y,channels]
 
@@ -208,12 +208,12 @@ def dataTrain(data, truth, batchSize, inDims, outDims ,minGray,maxGray, upDown=1
             rotation=0
 
         if brighten:
-            bright=(random.random()-.5)*(maxGray-minGray)+minGray
+            bright=(random.random()-.5)*(maxGray-minGray)
         else:
             bright=0
 
         if contrast:
-            contrastFactor=random.random()*2
+            contrastFactor=random.random()*2 + 0.1
         else:
             contrastFactor=1
 
