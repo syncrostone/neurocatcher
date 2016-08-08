@@ -1,6 +1,7 @@
 from .dataTrain import dataTrain
+from numpy import newaxis, array
 
-def buildConvNet(filtShapes, inputShape):
+def buildConvNet(filtShapes, inputChannels):
     '''
     Builds a feedfoward network consisting of only 2D convolutional layers
 
@@ -22,7 +23,7 @@ def buildConvNet(filtShapes, inputShape):
     from keras.models import Sequential
     from keras.layers import Conv2D, Activation
 
-    input_shape = (inputShape[0], inputShape[0], inputShape[1])
+    input_shape = (None, None, None, inputChannels)
 
     model = Sequential()
 
@@ -34,7 +35,7 @@ def buildConvNet(filtShapes, inputShape):
 
         # first layer needs input size
         if i == 0:
-            model.add(Conv2D(*size, input_shape=input_shape))
+            model.add(Conv2D(*size, batch_input_shape=input_shape))
         else:
             model.add(Conv2D(*size))
 
@@ -46,16 +47,46 @@ def buildConvNet(filtShapes, inputShape):
 
     return model
 
-def trainConvNet(filtShapes, inputShape, data, truth,  batchSize):
+def trainConvNet(filtShapes, inputShape, data, truth, batchSize, steps=1000):
     '''
     Trains a simple ConvNet to predict sources from feature maps
     '''
-    if not isinstance(data, list):
-        data = [data]
 
-    network = buildConvNet(filtShapes, inputShape, data)
+    network = buildConvNet(filtShapes, inputShape[1])
     network.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
 
-    outDims = network.get_output_shape_at(-1)[1]
-    inDims = network.get_input_shape_at(0)[1]
-    batch = dataTrain(data, truth, batchSize, inDims, outDims, minGray=data.min(), maxGray=data.max())
+    inDims = inputShape[0]
+    outDims = inDims - sum(zip(*filtShapes)[0]) + len(filtShapes)
+
+    minVals, maxVals = zip(*([(d.min(), d.max()) for d in data]))
+    dataMin, dataMax = min(minVals), max(maxVals)
+    stats = []
+    for t in range(steps):
+        batchData, batchTruth = dataTrain(data, truth, batchSize,
+                                          inDims, outDims,
+                                          minGray=dataMin, maxGray=dataMax)
+
+        res = network.train_on_batch(batchData, batchTruth)
+        stats.append(res)
+
+    return array(stats), network
+
+def predictConvNet(network, data, truth=None):
+    '''
+    Applies the ConvNet to data to predictions
+    '''
+    from regional import many
+    predictions = []
+    cropped = []
+    for i in range(len(data)):
+        predictions.append(network.predict_proba(data[i][newaxis, ...])[0,...,0])
+        if truth is not None:
+            mask = many(truth[i]).mask(data[i].shape[:2], fill='black')[...,0]
+            clip = data[i].shape[0] - predictions[i].shape[0]
+            left = clip/2
+            right = left + clip%2
+            cropped.append(mask[left:-right, left:-right])
+    if truth:
+        return predictions, cropped
+    else:
+        return predictions

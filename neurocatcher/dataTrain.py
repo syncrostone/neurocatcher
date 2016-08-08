@@ -2,7 +2,6 @@ from numpy import zeros, flipud, transpose, rot90, mean, expand_dims
 import random
 
 
-
 def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, upDown=1, rotate=1, brighten=1, contrast=1):
 
     """
@@ -133,7 +132,7 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
             return flipped
         else:
             return toFlip
-    
+
     def rotate(toRotate,rand):
         """
         rotate each x y plane of [x,y,channels]
@@ -162,24 +161,19 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
             return toRotate
 
 
-    #########################################################################   
-    
-
-
+    #########################################################################
 
     # make binary image of truth, trutharray
     truthArray=[zeros((dataset.shape[0],dataset.shape[1],1)) for dataset in data]
-    for d,dataset in enumerate(truth):
+    for d, dataset in enumerate(truth):
         for neuron in dataset:
             for coordinate in neuron:
                 truthArray[d][coordinate[0],coordinate[1],0]=1
-    
- 
 
     #set size of returned arrays
     outData=zeros((batchSize,inDims,inDims,data[0].shape[2]))
     outTruth=zeros((batchSize,outDims,outDims,1))
-    
+
     #initialize random generator
     random.seed()
 
@@ -199,7 +193,7 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
         cropEnd=inDims-(totalCrop/2+totalCrop%2)
 
         #randomly set all image distortion values if on, otherwise set to identity of function
-        if flipud: 
+        if flipud:
             flip=random.randint(0,1)
         else:
             flip=0
@@ -222,7 +216,5 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
         #calculate datapoint with distortions and truth cropping
         outData[b, :, :, :]=changeContrast(makeBright(rotate(flipUpDown(currData,flip),rotation),bright),contrastFactor)
         outTruth[b, :, :, :]=rotate(flipUpDown(currTruth,flip),rotation)[cropStart:cropEnd,cropStart:cropEnd,:]
-    return outData, outTruth
-    
-    
 
+    return outData, outTruth
