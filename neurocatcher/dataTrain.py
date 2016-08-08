@@ -28,7 +28,7 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
     minGray : int, optional, default=0
         minimum grayscale value
 
-    maxGray : int
+    maxGray : int, optional, default=255
         maximum grayscale value
 
     upDown : bool, optional, default=255

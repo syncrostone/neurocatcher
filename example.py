@@ -15,7 +15,7 @@ data=np.transpose(data,(1,2,0))
 
 data=[data]
 
-batchData,batchTruth=dataTrain(data,[truth],10,20,20-6,0,255,upDown=0,rotate=0)
+batchData,batchTruth=dataTrain(data,[truth],10,20,20-6,minGray=0,maxGray=255,upDown=0,rotate=0)
 
 for i,pic in enumerate(batchData):
 	image(np.mean(pic,axis=2))
