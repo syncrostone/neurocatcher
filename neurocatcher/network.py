@@ -22,7 +22,7 @@ def buildConvNet(filtShapes, inputShape):
     from keras.models import Sequential
     from keras.layers import Conv2D, Activation
 
-    input_shape = (inputShape[0], inputShape[0], inputShape[-1])
+    input_shape = (inputShape[0], inputShape[0], inputShape[1])
 
     model = Sequential()
 
@@ -30,7 +30,7 @@ def buildConvNet(filtShapes, inputShape):
     for i, size in enumerate(filtShapes):
 
         # reorder size, since Conv2D wants # of filters first
-        size = (size[-1], size[1], size[1])
+        size = (size[1], size[0], size[0])
 
         # first layer needs input size
         if i == 0:
