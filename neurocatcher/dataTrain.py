@@ -25,13 +25,13 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
     outDims : int
         truth size (outDims*outDims), output size of network
 
-    minGray : int
+    minGray : int, optional, default=0
         minimum grayscale value
 
     maxGray : int
         maximum grayscale value
 
-    upDown : bool,optional, default=1
+    upDown : bool, optional, default=255
         whether to flip images up and down
 
     rotate : bool, optional, default=1
