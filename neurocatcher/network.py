@@ -56,7 +56,8 @@ def train_conv_net(filt_shapes, input_shape, data, truth, batch_size, steps=1000
     network.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
 
     in_dims = input_shape[0]
-    out_dims = in_dims - sum(zip(*filt_shapes)[0]) + len(filt_shapes)
+    out_dims = in_dims - sum(list(zip(*filt_shapes))[0]) + len(filt_shapes)
+
 
     min_vals, max_vals = zip(*([(d.min(), d.max()) for d in data]))
     data_min, data_max = min(min_vals), max(max_vals)
