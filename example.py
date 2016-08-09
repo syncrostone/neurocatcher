@@ -6,7 +6,7 @@ import matplotlib.pyplot as plot
 import numpy as np
 from fakearray import calcium_imaging
 
-from neurocatcher import dataTrain
+from neurocatcher import data_train
 
 data,series,truth=calcium_imaging(shape=(100,100), n=12, t=10, withparams=True)
 
@@ -15,10 +15,60 @@ data=np.transpose(data,(1,2,0))
 
 data=[data]
 
-batchData,batchTruth=dataTrain(data,[truth],10,20,20-6,minGray=0,maxGray=255,upDown=0,rotate=0)
+batch_data,batch_truth=data_train(data,[truth],10,20,20-6)
 
-for i,pic in enumerate(batchData):
+for i,pic in enumerate(batch_data):
 	image(np.mean(pic,axis=2))
 	plot.show()
-	image(batchTruth[i,:,:,0])
+	image(batch_truth[i,:,:,0])
 	plot.show()
+
+
+##train a network and check how it performs
+
+import neurocatcher as nc
+import fakearray as fa
+
+from showit import image
+import numpy as np
+import matplotlib.pyplot as plot
+
+# generate some faux calcium imaging data
+data, series, truth = fa.calcium_imaging(withparams=True)
+
+# we will train a network that takes the mean image as input
+data = [data.mean(axis=0)[..., np.newaxis]]
+truth = [truth]
+
+# each layer is defined by (filter footprint, 3 of features)
+layers = [(3, 10), (3, 10)]
+
+# the input will be a 15-by-15 patch with a single channel
+inputShape = (15, 1)
+
+# train network
+acc, network = nc.network.train_conv_net(layers, inputShape, data, truth, batch_size=30, steps=1000)
+
+# show how the loss changes during training
+plot.plot(acc[:, 0])
+plot.show()
+##predict output using trained network
+
+#generate new data to predict on
+data,series,truth=calcium_imaging(shape=(240,240), n=75, t=10, noise=0.0, withparams=True)
+data = [data.mean(axis=0)[..., np.newaxis]]
+truth = [truth]
+
+# get a prediction from the full data set
+yhat, ytarget = nc.network.predict_conv_net(network, data, truth)
+
+# visualize the results
+plot.figure(figsize=(20, 15))
+
+plot.subplot(1, 2, 1)
+plot.imshow(ytarget[0], cmap='bone')
+
+plot.subplot(1, 2, 2)
+plot.imshow(yhat[0], cmap='bone')
+
+plot.show()

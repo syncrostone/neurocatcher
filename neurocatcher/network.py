@@ -1,7 +1,7 @@
-from .dataTrain import dataTrain
+from .data_train import data_train
 from numpy import newaxis, array
 
-def buildConvNet(filtShapes, inputChannels):
+def build_conv_net(filt_shapes, input_channels):
     '''
     Builds a feedfoward network consisting of only 2D convolutional layers
 
@@ -9,11 +9,11 @@ def buildConvNet(filtShapes, inputChannels):
 
     Parameters
     ----------
-    filtShape: list-like
+    filt_shapes: list-like
         A list of filter sizes. Filters are square. Length of list = # of layers.
         Each filter shape should be 3D, (size, channels).
 
-    inputShape: list-like
+    input_channels: list-like
         Input shape size; (height, width, channels)
 
     Returns
@@ -23,12 +23,12 @@ def buildConvNet(filtShapes, inputChannels):
     from keras.models import Sequential
     from keras.layers import Conv2D, Activation
 
-    input_shape = (None, None, None, inputChannels)
+    input_shape = (None, None, None, input_channels)
 
     model = Sequential()
 
     # generate 2d convolutional layers
-    for i, size in enumerate(filtShapes):
+    for i, size in enumerate(filt_shapes):
 
         # reorder size, since Conv2D wants # of filters first
         size = (size[1], size[0], size[0])
@@ -47,31 +47,31 @@ def buildConvNet(filtShapes, inputChannels):
 
     return model
 
-def trainConvNet(filtShapes, inputShape, data, truth, batchSize, steps=1000):
+def train_conv_net(filt_shapes, input_shape, data, truth, batch_size, steps=1000):
     '''
     Trains a simple ConvNet to predict sources from feature maps
     '''
 
-    network = buildConvNet(filtShapes, inputShape[1])
+    network = build_conv_net(filt_shapes, input_shape[1])
     network.compile(optimizer='sgd', loss='binary_crossentropy', metrics=['accuracy'])
 
-    inDims = inputShape[0]
-    outDims = inDims - sum(zip(*filtShapes)[0]) + len(filtShapes)
+    in_dims = input_shape[0]
+    out_dims = in_dims - sum(zip(*filt_shapes)[0]) + len(filt_shapes)
 
-    minVals, maxVals = zip(*([(d.min(), d.max()) for d in data]))
-    dataMin, dataMax = min(minVals), max(maxVals)
+    min_vals, max_vals = zip(*([(d.min(), d.max()) for d in data]))
+    data_min, data_max = min(min_vals), max(max_vals)
     stats = []
     for t in range(steps):
-        batchData, batchTruth = dataTrain(data, truth, batchSize,
-                                          inDims, outDims,
-                                          minGray=dataMin, maxGray=dataMax)
+        batch_data, batch_truth = data_train(data, truth, batch_size,
+                                          in_dims, out_dims,
+                                          min_gray=data_min, max_gray=data_max)
 
-        res = network.train_on_batch(batchData, batchTruth)
+        res = network.train_on_batch(batch_data, batch_truth)
         stats.append(res)
 
     return array(stats), network
 
-def predictConvNet(network, data, truth=None):
+def predict_conv_net(network, data, truth=None):
     '''
     Applies the ConvNet to data to predictions
     '''

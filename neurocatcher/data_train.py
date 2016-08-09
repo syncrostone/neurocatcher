@@ -2,7 +2,7 @@ from numpy import zeros, flipud, transpose, rot90, mean, expand_dims
 import random
 
 
-def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, upDown=1, rotate=1, brighten=1, contrast=1):
+def data_train(data, truth, batch_size, in_dims, out_dims, min_gray=0, max_gray=255, up_down=1, rotation=1, brighten=1, contrast=1):
 
     """
     Generate training data of specified size with transformations.
@@ -19,22 +19,22 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
         [dataset lists[n lists [list of [x,y] coordinates]]
         neuron location coordinates, will be converted into binary image
 
-    inDims : int
-        data size (inDims*inDims) for input into network during training
+    in_dims : int
+        data size (in_dims*in_dims) for input into network during training
 
-    outDims : int
-        truth size (outDims*outDims), output size of network
+    out_dims : int
+        truth size (out_dims*out_dims), output size of network
 
-    minGray : int, optional, default=0
+    min_gray : int, optional, default=0
         minimum grayscale value
 
-    maxGray : int, optional, default=255
+    max_gray : int, optional, default=255
         maximum grayscale value
 
-    upDown : bool, optional, default=255
+    up_down : bool, optional, default=255
         whether to flip images up and down
 
-    rotate : bool, optional, default=1
+    rotation : bool, optional, default=1
         whether to rotate image
 
     brighten : bool, optional, default=1
@@ -45,23 +45,23 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
 
     Returns
     -------
-    outData : numpy array
-        (datapoint,outdims,outdims,channels) array
+    out_data : numpy array
+        (datapoint,out_dims,out_dims,channels) array
 
-    outTruth : numpy array
-        (batch,outdims,outdims,1) array
+    out_truth : numpy array
+        (batch,out_dims,out_dims,1) array
     """
 
 
     ### set up necessary functions #####################################
-    def makeBright(toBrighten, rand):
+    def make_bright(to_brighten, rand):
         """
         change brightness of each x y plane of [x,y,channels]
 
         Parameters
         ----------
 
-        toBrighten : numpy array
+        to_brighten : numpy array
             [x,y,channels]
 
         rand : float
@@ -73,12 +73,12 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
         brightened : numpy array
             [x, y, channels]
         """
-        brightened=toBrighten+rand
-        brightened[brightened>maxGray]=maxGray
-        brightened[brightened<minGray]=minGray
+        brightened=to_brighten+rand
+        brightened[brightened>max_gray]=max_gray
+        brightened[brightened<min_gray]=min_gray
         return brightened
 
-    def changeContrast(toContrast,rand):
+    def change_contrast(to_contrast,rand):
         """
         change contrast of each x y plane of [x,y,channels]
 
@@ -98,21 +98,21 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
             [x, y, channels]
         """
 
-        mn=zeros(toContrast.shape)
-        mn[0,0,:]=mean(toContrast,axis=(0,1))
-        contrasted=(toContrast-mn)*rand+mn
-        contrasted[contrasted>maxGray]=maxGray
-        contrasted[contrasted<minGray]=minGray
+        mn=zeros(to_contrast.shape)
+        mn[0,0,:]=mean(to_contrast,axis=(0,1))
+        contrasted=(to_contrast-mn)*rand+mn
+        contrasted[contrasted>max_gray]=max_gray
+        contrasted[contrasted<min_gray]=min_gray
         return contrasted
 
-    def flipUpDown(toFlip,rand):
+    def flip_up_down(to_flip,rand):
         """
         flip each x y plane of [x,y,channels]
 
         Parameters
         ----------
 
-        toFlip : numpy array
+        to_flip : numpy array
             [x,y,channels]
 
         rand : bool
@@ -125,22 +125,22 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
             [x, y, channels]
         """
         if rand==1:
-            flipped=zeros(toFlip.shape)
-            toFlip=transpose(toFlip,(2,0,1))
-            for c, channel in enumerate(toFlip):
+            flipped=zeros(to_flip.shape)
+            to_flip=transpose(to_flip,(2,0,1))
+            for c, channel in enumerate(to_flip):
                 flipped[:,:,c]=flipud(channel)
             return flipped
         else:
-            return toFlip
+            return to_flip
 
-    def rotate(toRotate,rand):
+    def rotate(to_rotate,rand):
         """
         rotate each x y plane of [x,y,channels]
 
         Parameters
         ----------
 
-        toRotate : numpy array
+        to_rotate : numpy array
             [x,y,channels]
         rand : int
             how much to rotate [0,1,2,3]* 90 degrees
@@ -152,69 +152,69 @@ def dataTrain(data, truth, batchSize, inDims, outDims, minGray=0, maxGray=255, u
             [x, y, channels]
         """
         if rand==1:
-            rotated=zeros(toRotate.shape)
-            toRotate=transpose(toRotate,(2,0,1))
-            for c, channel in enumerate(toRotate):
+            rotated=zeros(to_rotate.shape)
+            to_rotate=transpose(to_rotate,(2,0,1))
+            for c, channel in enumerate(to_rotate):
                 rotated[:,:,c]=rot90(channel,rand)
             return rotated
         else:
-            return toRotate
+            return to_rotate
 
 
     #########################################################################
 
-    # make binary image of truth, trutharray
-    truthArray=[zeros((dataset.shape[0],dataset.shape[1],1)) for dataset in data]
+    # make binary image of truth, truth_array
+    truth_array=[zeros((dataset.shape[0],dataset.shape[1],1)) for dataset in data]
     for d, dataset in enumerate(truth):
         for neuron in dataset:
             for coordinate in neuron:
-                truthArray[d][coordinate[0],coordinate[1],0]=1
+                truth_array[d][coordinate[0],coordinate[1],0]=1
 
     #set size of returned arrays
-    outData=zeros((batchSize,inDims,inDims,data[0].shape[2]))
-    outTruth=zeros((batchSize,outDims,outDims,1))
+    out_data=zeros((batch_size,in_dims,in_dims,data[0].shape[2]))
+    out_truth=zeros((batch_size,out_dims,out_dims,1))
 
     #initialize random generator
     random.seed()
 
     #generate a random patch for each image in the batch
-    for b in range(0,batchSize):
+    for b in range(0,batch_size):
 
         #randomly pick the patch to use
         dataset=random.randint(0,len(data)-1)
-        startX=random.randint(0,data[dataset].shape[0]-inDims)
-        startY=random.randint(0,data[dataset].shape[1]-inDims)
-        currData=data[dataset][startX:startX+inDims, startY:startY+inDims,:]
-        currTruth=truthArray[dataset][startX:startX+inDims, startY:startY+inDims,:]
+        start_x=random.randint(0,data[dataset].shape[0]-in_dims)
+        start_y=random.randint(0,data[dataset].shape[1]-in_dims)
+        curr_data=data[dataset][start_x:start_x+in_dims, start_y:start_y+in_dims,:]
+        curr_truth=truth_array[dataset][start_x:start_x+in_dims, start_y:start_y+in_dims,:]
 
         #calculate truth cropping indices
-        totalCrop=inDims-outDims
-        cropStart=totalCrop/2
-        cropEnd=inDims-(totalCrop/2+totalCrop%2)
+        total_crop=in_dims-out_dims
+        crop_start=total_crop/2
+        crop_end=in_dims-(total_crop/2+total_crop%2)
 
         #randomly set all image distortion values if on, otherwise set to identity of function
-        if flipud:
+        if up_down:
             flip=random.randint(0,1)
         else:
             flip=0
 
-        if rotate:
+        if rotation:
             rotation=random.randint(0,3)
         else:
             rotation=0
 
         if brighten:
-            bright=(random.random()-.5)*(maxGray-minGray)
+            bright=(random.random()-.5)*(max_gray-min_gray)
         else:
             bright=0
 
         if contrast:
-            contrastFactor=random.random()*2 + 0.1
+            contrast_factor=random.random()*2 + 0.1
         else:
-            contrastFactor=1
+            contrast_factor=1
 
         #calculate datapoint with distortions and truth cropping
-        outData[b, :, :, :]=changeContrast(makeBright(rotate(flipUpDown(currData,flip),rotation),bright),contrastFactor)
-        outTruth[b, :, :, :]=rotate(flipUpDown(currTruth,flip),rotation)[cropStart:cropEnd,cropStart:cropEnd,:]
+        out_data[b, :, :, :]=change_contrast(make_bright(rotate(flip_up_down(curr_data,flip),rotation),bright),contrast_factor)
+        out_truth[b, :, :, :]=rotate(flip_up_down(curr_truth,flip),rotation)[crop_start:crop_end,crop_start:crop_end,:]
 
-    return outData, outTruth
+    return out_data, out_truth
