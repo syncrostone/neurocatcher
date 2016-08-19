@@ -161,7 +161,7 @@ def data_train(data, truth, batch_size, in_dims, out_dims, min_gray=0, max_gray=
             return to_rotate
 
 
-    #########################################################################
+    ########################################################################
 
     # make binary image of truth, truth_array
     truth_array=[zeros((dataset.shape[0],dataset.shape[1],1)) for dataset in data]
